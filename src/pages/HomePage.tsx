@@ -26,14 +26,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
           >
             Sign Up
           </button>
-
-          <button
-            onClick={() => onNavigate('dashboard')}
-            className="w-full max-w-xs bg-[#FF8A34] text-white font-[600] text-base px-9 py-4 rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.05)] transition-all duration-200 hover:bg-[#E67A2A] hover:shadow-[0_12px_32px_rgba(255,138,52,0.2)] hover:scale-105"
-            style={{ fontFamily: 'Inter, Roboto, sans-serif' }}
-          >
-            Dashboard
-          </button>
         </div>
       </div>
     </div>

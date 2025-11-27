@@ -1,20 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TaskDetailsPage } from './pages/TaskDetailsPage';
+import { isAuthenticated } from './lib/auth';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [taskId, setTaskId] = useState<string>();
 
   const handleNavigate = (page: string, id?: string) => {
+    if (page === 'dashboard' || page === 'taskDetails') {
+      if (!isAuthenticated()) {
+        setCurrentPage('login');
+        return;
+      }
+    }
     setCurrentPage(page);
     if (id) {
       setTaskId(id);
     }
   };
+
+  useEffect(() => {
+    if ((currentPage === 'dashboard' || currentPage === 'taskDetails') && !isAuthenticated()) {
+      setCurrentPage('login');
+    }
+  }, [currentPage]);
 
   return (
     <>
