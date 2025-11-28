@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Bell, Settings, Users, Calendar, CheckSquare, MoreVertical, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Settings, Users, Calendar, CheckSquare, MoreVertical, LogOut } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface Task {
   id: string;
@@ -23,6 +24,20 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        onNavigate('login');
+      }
+    };
+    checkAuth();
+  }, [onNavigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    onNavigate('login');
+  };
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: '1',
@@ -178,9 +193,13 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           <h2 className="text-3xl font-[800] text-[#1A1A1A]">Dashboard</h2>
           <div className="flex items-center gap-6">
             <Bell size={24} className="text-[#6D6D6D] cursor-pointer hover:text-[#004CFF] transition-colors" />
-            <div className="w-10 h-10 rounded-full bg-[#004CFF] text-white flex items-center justify-center font-[700] cursor-pointer">
-              U
-            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-[#6D6D6D] hover:text-red-500 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
+            >
+              <LogOut size={20} />
+              <span className="text-sm font-[500]">Logout</span>
+            </button>
           </div>
         </div>
 

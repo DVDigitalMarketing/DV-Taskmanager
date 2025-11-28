@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { validateEmailDomain, getEmailDomainError, hashPassword, setCurrentUser } from '../lib/auth';
 
 interface SignUpPageProps {
   onNavigate: (page: string) => void;
@@ -10,66 +9,40 @@ export function SignUpPage({ onNavigate }: SignUpPageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [generalError, setGeneralError] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const isFormValid = name.trim() !== '' && email.trim() !== '' && password.trim() !== '' && validateEmailDomain(email);
+  const isFormValid = name.trim() !== '' && email.trim() !== '' && password.trim() !== '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEmailError('');
-    setGeneralError('');
+    setError('');
+    setIsLoading(true);
 
-    if (!validateEmailDomain(email)) {
-      setEmailError(getEmailDomainError());
+    if (!name || !email || !password) {
+      setError('All fields are required.');
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', email.toLowerCase())
-        .maybeSingle();
-
-      if (existingUser) {
-        setGeneralError('An account with this email already exists.');
-        setIsLoading(false);
-        return;
-      }
-
-      const passwordHash = await hashPassword(password);
-
-      const { data: newUser, error } = await supabase
-        .from('users')
-        .insert([
-          {
-            email: email.toLowerCase(),
-            name: name.trim(),
-            password_hash: passwordHash,
-          },
-        ])
-        .select('id, email, name')
-        .single();
-
-      if (error) {
-        setGeneralError('Failed to create account. Please try again.');
-        setIsLoading(false);
-        return;
-      }
-
-      setCurrentUser({
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
+      const { data, error: signupError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
       });
 
+      if (signupError) {
+        setError(signupError.message);
+        setIsLoading(false);
+        return;
+      }
+
       onNavigate('dashboard');
-    } catch (error) {
-      setGeneralError('An unexpected error occurred. Please try again.');
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
   };
@@ -81,10 +54,10 @@ export function SignUpPage({ onNavigate }: SignUpPageProps) {
       </h1>
 
       <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.05)] p-10">
-        {generalError && (
+        {error && (
           <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
             <p className="text-sm font-[500] text-[#FF3B3B]" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
-              {generalError}
+              {error}
             </p>
           </div>
         )}
@@ -114,20 +87,12 @@ export function SignUpPage({ onNavigate }: SignUpPageProps) {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setEmailError('');
-              }}
-              placeholder="you@demandvibes.com"
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               className="px-4 py-3 rounded-2xl border-2 border-[#D0D4DC] focus:outline-none focus:border-[#004CFF] transition-colors duration-200 text-[#1A1A1A] placeholder-[#6D6D6D]"
               style={{ fontFamily: 'Inter, Roboto, sans-serif' }}
               required
             />
-            {emailError && (
-              <p className="text-[14px] text-[#FF3B3B] mt-[6px]" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
-                {emailError}
-              </p>
-            )}
           </div>
 
           <div className="flex flex-col gap-2">

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { validateEmailDomain, getEmailDomainError, hashPassword, setCurrentUser } from '../lib/auth';
 
 interface LoginPageProps {
   onNavigate: (page: string) => void;
@@ -9,53 +8,37 @@ interface LoginPageProps {
 export function LoginPage({ onNavigate }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [generalError, setGeneralError] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const isFormValid = email.trim() !== '' && password.trim() !== '' && validateEmailDomain(email);
+  const isFormValid = email.trim() !== '' && password.trim() !== '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEmailError('');
-    setGeneralError('');
+    setError('');
+    setIsLoading(true);
 
-    if (!validateEmailDomain(email)) {
-      setEmailError(getEmailDomainError());
+    if (!email || !password) {
+      setError('Email and password are required.');
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      const passwordHash = await hashPassword(password);
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id, email, name, password_hash')
-        .eq('email', email.toLowerCase())
-        .maybeSingle();
-
-      if (!user || user.password_hash !== passwordHash) {
-        setGeneralError('Invalid email or password.');
+      if (loginError) {
+        setError('Invalid email or password.');
         setIsLoading(false);
         return;
       }
 
-      await supabase
-        .from('users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', user.id);
-
-      setCurrentUser({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      });
-
       onNavigate('dashboard');
-    } catch (error) {
-      setGeneralError('An unexpected error occurred. Please try again.');
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
   };
@@ -67,10 +50,10 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       </h1>
 
       <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.05)] p-10">
-        {generalError && (
+        {error && (
           <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
             <p className="text-sm font-[500] text-[#FF3B3B]" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
-              {generalError}
+              {error}
             </p>
           </div>
         )}
@@ -84,20 +67,12 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setEmailError('');
-              }}
-              placeholder="you@demandvibes.com"
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               className="px-4 py-3 rounded-2xl border-2 border-[#D0D4DC] focus:outline-none focus:border-[#004CFF] transition-colors duration-200 text-[#1A1A1A] placeholder-[#6D6D6D]"
               style={{ fontFamily: 'Inter, Roboto, sans-serif' }}
               required
             />
-            {emailError && (
-              <p className="text-[14px] text-[#FF3B3B] mt-[6px]" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
-                {emailError}
-              </p>
-            )}
           </div>
 
           <div className="flex flex-col gap-2">
