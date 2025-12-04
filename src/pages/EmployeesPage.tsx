@@ -59,23 +59,22 @@ export function EmployeesPage({ onNavigate }: EmployeesPageProps) {
   }, [selectedUser, showChat]);
 
   const loadTeamMembers = async () => {
-    const { data: users } = await supabase.auth.admin.listUsers();
-    if (!users) return;
-
-    const { data: presenceData } = await supabase
-      .from('user_presence')
+    const { data, error } = await supabase
+      .from('team_members_view')
       .select('*');
 
-    const members: UserPresence[] = users.users.map(user => {
-      const presence = presenceData?.find(p => p.user_id === user.id);
-      return {
-        user_id: user.id,
-        is_online: presence?.is_online || false,
-        last_seen: presence?.last_seen || user.created_at,
-        email: user.email || '',
-        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User'
-      };
-    });
+    if (error) {
+      console.error('Error loading team members:', error);
+      return;
+    }
+
+    const members: UserPresence[] = (data || []).map(member => ({
+      user_id: member.user_id,
+      is_online: member.is_online || false,
+      last_seen: member.last_seen,
+      email: member.email || '',
+      name: member.name || member.email?.split('@')[0] || 'User'
+    }));
 
     setTeamMembers(members);
   };

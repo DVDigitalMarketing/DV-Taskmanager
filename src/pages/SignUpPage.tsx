@@ -9,18 +9,39 @@ export function SignUpPage({ onNavigate }: SignUpPageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const isFormValid = name.trim() !== '' && email.trim() !== '' && password.trim() !== '';
+  const isFormValid = name.trim() !== '' && email.trim() !== '' && password.trim() !== '' && confirmPassword.trim() !== '';
+
+  const validatePassword = (pass: string): string | null => {
+    if (pass.length < 6) {
+      return 'Password must be at least 6 characters long';
+    }
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !confirmPassword) {
       setError('All fields are required.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      setIsLoading(false);
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       setIsLoading(false);
       return;
     }
@@ -30,17 +51,27 @@ export function SignUpPage({ onNavigate }: SignUpPageProps) {
         email,
         password,
         options: {
-          data: { name }
+          data: { name },
+          emailRedirectTo: `${window.location.origin}`
         }
       });
 
       if (signupError) {
-        setError(signupError.message);
+        if (signupError.message.includes('already registered')) {
+          setError('This email is already registered. Try logging in instead or use password reset.');
+        } else {
+          setError(signupError.message);
+        }
         setIsLoading(false);
         return;
       }
 
-      onNavigate('dashboard');
+      if (data.user && data.session) {
+        onNavigate('dashboard');
+      } else if (data.user && !data.session) {
+        setError('Account created! Please check your email to confirm your account before logging in.');
+        setIsLoading(false);
+      }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
@@ -55,8 +86,8 @@ export function SignUpPage({ onNavigate }: SignUpPageProps) {
 
       <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.05)] p-10">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
-            <p className="text-sm font-[500] text-[#FF3B3B]" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
+          <div className={`mb-6 p-4 rounded-2xl ${error.includes('created') ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
+            <p className={`text-sm font-[500] ${error.includes('created') ? 'text-green-700' : 'text-[#FF3B3B]'}`} style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
               {error}
             </p>
           </div>
@@ -104,7 +135,24 @@ export function SignUpPage({ onNavigate }: SignUpPageProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="At least 6 characters"
+              className="px-4 py-3 rounded-2xl border-2 border-[#D0D4DC] focus:outline-none focus:border-[#004CFF] transition-colors duration-200 text-[#1A1A1A] placeholder-[#6D6D6D]"
+              style={{ fontFamily: 'Inter, Roboto, sans-serif' }}
+              required
+            />
+            <p className="text-xs text-[#6D6D6D] mt-1">Minimum 6 characters</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="confirmPassword" className="text-sm font-[500] text-[#1A1A1A]" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter password"
               className="px-4 py-3 rounded-2xl border-2 border-[#D0D4DC] focus:outline-none focus:border-[#004CFF] transition-colors duration-200 text-[#1A1A1A] placeholder-[#6D6D6D]"
               style={{ fontFamily: 'Inter, Roboto, sans-serif' }}
               required
